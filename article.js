@@ -248,7 +248,7 @@ document.addEventListener('DOMContentLoaded', () => {
         data.poster = e.target.result;
         const poster = document.getElementById('poster');
         poster.src = data.poster;
-        actionManager(poster, data.poster, oldPoster, 'image-change');
+        actionManager(poster, null, null, data.poster, oldPoster, 'image-change');
       }
       
       reader.readAsDataURL(this.files[0]);
@@ -256,28 +256,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('main-page-btn').addEventListener('click', () => {
         window.location.href = 'index.html';
     });
-    document.getElementById('articles-toggle-btn').addEventListener('click', function () {
-        const articleList = document.getElementById('article-list');
-        const toggleBtnImg = this.querySelector('.toggle-btn-img');
-        if (articleList.style.display !== 'block') {
-            articleList.style.display = 'block';
-            toggleBtnImg.src = 'https://i.ibb.co/s91K27m8/20251024-091953.png';
-        } else {
-            articleList.style.display = 'none';
-            toggleBtnImg.src = 'https://i.ibb.co/6q919Xb/20251024-055350.png';
-        }
-    });
-    document.getElementById('toggle-saves-btn').addEventListener('click', function () {
-        const saveList = document.getElementById('save-list');
-        const toggleBtnImg = this.querySelector('.toggle-btn-img');
-        if (saveList.style.display !== 'block') {
-            saveList.style.display = 'block';
-            toggleBtnImg.src = 'https://i.ibb.co/s91K27m8/20251024-091953.png';
-        } else {
-            saveList.style.display = 'none';
-            toggleBtnImg.src = 'https://i.ibb.co/6q919Xb/20251024-055350.png';
-        }
-    });
+    document.getElementById('articles-toggle-btn').addEventListener('click', toggleList);
+    document.getElementById('toggle-saves-btn').addEventListener('click', toggleList);
     document.getElementById('tutorial-page-btn').addEventListener('click', () => {
         window.location.href = 'tutorial.html';
     });
@@ -293,7 +273,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const elementActions = undoList.filter(undo => undo.element === element);
         const lastText = elementActions.length ? elementActions[elementActions.length - 1].newData : document.getElementById('intro').innerHTML;
         
-        actionManager(element, element.innerHTML, lastText, 'text-change');
+        actionManager(element, null, null, element.innerHTML, lastText, 'text-change');
     });
     document.getElementById('synopsis-text-input').addEventListener('input', (event) => {
         const element = event.target;
@@ -346,6 +326,20 @@ function toggleMainInfobox() {
         presetBtn2.style.display = 'none';
         introWrapper.style.width = '100%';
         infoboxToggleBtn.innerHTML = `<b>Main Infobox: Hide</b>`;
+    }
+}
+
+function toggleList(event) {
+    const parentNode = event.target.closest('.section-list-wrapper');
+    const nodeList = parentNode.querySelector('.node-list');
+    const toggleBtnImg = parentNode.querySelector('.toggle-btn-img');
+    
+    if (nodeList.style.display !== 'block') {
+        nodeList.style.display = 'block';
+        toggleBtnImg.src = 'https://i.ibb.co/s91K27m8/20251024-091953.png';
+    } else {
+        nodeList.style.display = 'none';
+        toggleBtnImg.src = 'https://i.ibb.co/6q919Xb/20251024-055350.png';
     }
 }
 
@@ -445,16 +439,7 @@ function undoManager() {
         }
         oldElements.push(...parentNode.children);
         
-        reAlignRows(mainArray, oldElements, oldArray, parentNode);
-        
-        if (undoList.length) {
-            if (parentNode.classList.contains('mini-row-wrapper') && type === undoList[undoList.length - 1].type) {
-                updateRowDelete2Btn(parentNode.parentNode, mainArray);
-                redoList.push(previousAction);
-                undoManager();
-                return;
-            }
-        }
+        if (reAlignRows(mainArray, oldElements, oldArray, parentNode, undoList, type)) undoManager();
     }
     redoList.push(previousAction);
 }
@@ -485,21 +470,12 @@ function redoManager() {
         }
         oldElements.push(...parentNode.children);
         
-        reAlignRows(mainArray, oldElements, newArray, parentNode);
-        
-        if (redoList.length) {
-            if (parentNode.classList.contains('mini-row-wrapper') && type === redoList[redoList.length - 1].type) {
-                updateRowDelete2Btn(parentNode.parentNode, mainArray);
-                undoList.push(previousAction);
-                redoManager();
-                return;
-            }
-        }
+        if (reAlignRows(mainArray, oldElements, newArray, parentNode, redoList, type)) redoManager();
     }
     undoList.push(previousAction);
 }
 
-function reAlignRows(mainArray, oldElements, savedArray, parentNode) {
+function reAlignRows(mainArray, oldElements, savedArray, parentNode, doList, type) {
     let filteredRows = [];
     
     savedArray.forEach(newObj => {
@@ -523,6 +499,13 @@ function reAlignRows(mainArray, oldElements, savedArray, parentNode) {
             node.remove();
         }
     });
+    
+    if (doList.length) {
+        if (parentNode.classList.contains('mini-row-wrapper') && type === doList[doList.length - 1].type) {
+            updateRowDelete2Btn(parentNode.parentNode, mainArray);
+            return true;
+        }
+    }
 }
 
 function toggleTable(tableId, button) {
@@ -1236,59 +1219,53 @@ function generateRow(elementNode, element, type) {
         type = element.type;
         isClone = true;
         template = document.getElementById(`${type}-template`).content.cloneNode(true);
+        
         const clone = JSON.parse(JSON.stringify(element));
         clone.id = newId;
         objects.push(updateRow(template, clone, type, isClone));
+        const rowElement = template.querySelector('.row-wrapper');
         if (type === 'category' || type === 'sub-category') {
             let childRows;
             let childRowNodes;
             if (type === 'category') {
+                const parentNode = elementNode.parentNode;
                 childRows = rows.filter(row => row.category === element.id);
-                childRowNodes = document.querySelectorAll(`.row-wrapper[data-category="${element.id}"]`);
+                childRowNodes = parentNode.querySelectorAll(`.row-wrapper[data-category="${element.id}"]`);
             } else {
                 childRows = rows.filter(row => row.subCategory === element.id);
-                childRowNodes = document.querySelectorAll(`.row-wrapper[data-sub-category="${element.id}"]`);
+                childRowNodes = parentNode.querySelectorAll(`.row-wrapper[data-sub-category="${element.id}"]`);
             }
             firstRow = childRowNodes[childRowNodes.length - 1];
-            childRows.forEach(row => {
+            firstRow.parentNode.insertBefore(template, firstRow.nextElementSibling);
+            firstRow = rowElement;
+            childRows.forEach((row, i) => {
                 const cloneTemplate = document.getElementById(`${row.type}-template`).content.cloneNode(true);
-                clones.push({ element: cloneTemplate, row: JSON.parse(JSON.stringify (row)) });
+                const object = JSON.parse(JSON.stringify(row));
+                const cloneNode = cloneTemplate.querySelector('.row-wrapper');
+                object.id = newId + i + 1;
+                if (type === 'category') {
+                    object.category = newId;
+                } else if (type === 'sub-category') {
+                    object.subCategory = newId;
+                }
+                clones.push(cloneNode);
+                objects.push(updateRow(cloneNode, object, object.type, true));
+                firstRow.parentNode.insertBefore(cloneNode, firstRow.nextElementSibling);
+                firstRow = cloneNode;
             });
+            clones.push(rowElement);
+            alignRows();
+            actionManager(clones, objects, document.getElementById('row-list'), rows, oldRows, 'element-change');
         }
     } else {
         template = document.getElementById(`${type}-template`).content.cloneNode(true);
         
         isClone = false;
         objects.push(updateRow(template, element, type, isClone));
-    }
-    
-    const rowElement = template.querySelector('.row-wrapper');
-    if (clones.length) {
-        firstRow.parentNode.insertBefore(template, firstRow.nextElementSibling);
-        firstRow = rowElement;
-        clones.forEach((clone, i) => {
-            const cloneNode = clone.element.querySelector('.row-wrapper');
-            clone.row.id = newId + i + 1;
-            if (type === 'category') {
-                clone.row.category = newId;
-            } else if (type === 'sub-category') {
-                clone.row.subCategory = newId;
-            }
-            objects.push(updateRow(cloneNode, clone.row, clone.row.type, true));
-            clone.element = cloneNode;
-            firstRow.parentNode.insertBefore(cloneNode, firstRow.nextElementSibling);
-            firstRow = cloneNode;
-        });
-        clones = clones.map(clone => clone.element);
-        clones.push(rowElement);
-    } else {
+        const rowElement = template.querySelector('.row-wrapper');
         elementNode ? elementNode.parentNode.insertBefore(template, elementNode.nextElementSibling) : document.getElementById('row-list').prepend(template);
-    }
-    alignRows();
-    if (!clones.length) {
+        alignRows();
         actionManager(rowElement, objects[0], document.getElementById('row-list'), rows, oldRows, 'element-change');
-    } else {
-        actionManager(clones, objects, document.getElementById('row-list'), rows, oldRows, 'element-change');
     }
 } 
 
@@ -1640,7 +1617,7 @@ function loadImage(event, element) {
         const infoboxImg = document.querySelector(`.row-wrapper[data-index="${element.id}"]`).querySelector('.infobox-img');
         element.imgSrc = src;
         infoboxImg.src = src;
-        actionManager(infoboxImg, src, oldSrc, 'image-change');
+        actionManager(infoboxImg, null, null, src, oldSrc, 'image-change');
     }
     
     if (event) {

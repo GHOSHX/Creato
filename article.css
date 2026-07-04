@@ -504,6 +504,17 @@ th, td {
   border: 0px;
 }
 
+#articles-toggle-btn, #toggle-saves-btn {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.toggle-btn-img {
+  width: 25px;
+  border: 0px;
+}
+
 #add-infobox-btn {
   background-image: url(https://i.ibb.co/jvZpGgFd/20251024-213808.png);
   background-size: contain;
