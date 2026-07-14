@@ -356,10 +356,13 @@ th, td {
 }
 
 #close-settings-btn {
-  background-color: #9e9e9e;
   position: absolute;
   right: 0;
   top: 0;
+}
+
+#settings button {
+  background-color: #9e9e9e;
 }
 
 #settings {
@@ -615,7 +618,9 @@ p {
   align-items: center;
 }
 
-.row-controls button {
+.row-controls button,
+.row-controls2 button,
+#poster-controls button {
   justify-content: center;
   align-items: center;
   width: 35px;
@@ -707,8 +712,35 @@ p {
   padding: 5px;
 }
 
-.infobox-img {
+#poster-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.image-wrapper {
+  position: relative;
+  display: inline-block;
   width: 80%;
+}
+
+#poster-controls, .row-controls2 {
+  position: absolute;
+  top: 1px;
+  width: 100%;
+  
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  padding: 5px;
+}
+
+#poster-controls {
+  width: 90%;
+}
+
+.infobox-img {
+  display: block;
+  width: 100%;
 }
 
 .infobox-bio {
@@ -743,7 +775,7 @@ img {
   border: 1px solid black;
 }
 
-.cell-input-wrapper, #title-input, .generate-preset-btn, .row-controls, .row2-wrapper, .row-delete-wrapper, .row-delete2-wrapper, .name-input, .bio-input {
+.cell-input-wrapper, #title-input, #poster-controls, .generate-preset-btn, .row-controls, .row-controls2, .row2-wrapper, .row-delete-wrapper, .row-delete2-wrapper, .name-input, .bio-input {
   display: none;
 }
 
@@ -774,9 +806,14 @@ img {
 .row-edit-mode .row-delete-cell,
 .row-edit-mode .generate-preset-btn,
 .row-edit-mode .cell-input-wrapper,
-.row-edit-mode .bio-input,
-.row-edit-mode .row-controls {
+.row-edit-mode .bio-input {
   display: block;
+}
+
+.row-edit-mode .row-controls,
+.row-edit-mode .row-controls2,
+.row-edit-mode #poster-controls {
+  display: flex;
 }
 
 .row-edit-mode .name-input {

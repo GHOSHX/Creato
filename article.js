@@ -236,10 +236,31 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error('File save cancelled or failed:', err);
       }
     });
-    document.getElementById('change-poster').addEventListener('click', () => {
-      if (editButton.textContent === '✔️') {
-          inputPoster.click();
+    document.getElementById('upload-img-btn').addEventListener('click', function () {
+      const imgBtn = this.parentNode.querySelectorAll('.infobox-img-btn');
+      let buttonDisplay;
+      if (getComputedStyle(imgBtn[0]).display.includes('none')) {
+          this.textContent = '❌️';
+          buttonDisplay = 'inline-flex';
+      } else {
+          this.textContent = '📷';
+          buttonDisplay = 'none';
       }
+    
+      imgBtn.forEach(button => {
+          button.style.display = buttonDisplay;
+      });
+    });
+    document.getElementById('img-file-btn2').addEventListener('click', () => {
+      inputPoster.click();
+    });
+    document.getElementById('img-link-btn2').addEventListener('click', () => {
+      const url = prompt('Enter the URL', 'https://');
+      const oldPoster = data.poster;
+      data.poster = url;
+      const poster = document.getElementById('poster');
+      poster.src = data.poster;
+      actionManager(poster, null, null, data.poster, oldPoster, 'image-change');
     });
     inputPoster.addEventListener('change', function () {
       const reader = new FileReader();
@@ -698,6 +719,7 @@ function editArticle() {
     const synopsisInput = document.getElementById('synopsis-text-input');
     const container = document.getElementById('container');
     const rowList = document.getElementById('row-list');
+    document.getElementById('poster-wrapper').classList.toggle('row-edit-mode');
     const editMode = editButton.textContent === '✏️';
     
     if (db) {
@@ -1039,13 +1061,17 @@ function handleRowClick(event) {
 
     if (target.classList.contains('upload-img-btn')) {
         const imgBtn = rowNode.querySelectorAll('.infobox-img-btn');
+        let buttonDisplay;
+        if (getComputedStyle(imgBtn[0]).display.includes('none')) {
+            target.textContent = '❌️';
+            buttonDisplay = 'inline-flex';
+        } else {
+            target.textContent = '📷';
+            buttonDisplay = 'none';
+        }
       
         imgBtn.forEach(button => {
-            if (getComputedStyle(button).display.includes('none')) {
-              button.style.display = 'inline-flex';
-            } else {
-              button.style.display = 'none';
-            }
+            button.style.display = buttonDisplay;
         });
     } else if (target.classList.contains('img-file-btn')) {
         rowNode.querySelector('.upload-img').click();
@@ -1375,7 +1401,6 @@ function updateCategory(row, category) {
     
     if (!categoryNode.dataset.index) {
         row.querySelector('.row-wrapper').dataset.index = category.id;
-        const editorWrapper = categoryNode.querySelector('.row-controls');
         const name = categoryNode.querySelector('.infobox-name');
         const nameInput = categoryNode.querySelector('.name-input');
         if (editMode) {
@@ -1396,7 +1421,6 @@ function updateSubCategory(row, subCategory) {
     if (!subCatNode.dataset.index) {
         subCatNode.dataset.index = subCategory.id;
         subCatNode.dataset.category = subCategory.category;
-        const editorWrapper = subCatNode.querySelector('.row-controls');
         const name = subCatNode.querySelector('.infobox-name');
         const nameInput = subCatNode.querySelector('.name-input');
         if (editMode) {
@@ -1459,7 +1483,6 @@ function updateTextArea(row, textArea) {
     textAreaNode.dataset.index = textArea.id;
     textAreaNode.dataset.category = textArea.category;
     textAreaNode.dataset.subCategory = textArea.subCategory;
-    const editorWrapper = textAreaNode.querySelector('.row-controls');
     const bio = row.querySelector('.infobox-bio-text');
     const bioInput = textAreaNode.querySelector('.bio-input');
     if (editMode) {

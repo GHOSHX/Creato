@@ -24,7 +24,6 @@ function openDB() {
 }
 
 let articles = [];
-let sections = [];
 let tutorialComplete = false;
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -135,7 +134,6 @@ function handleSectionClick(event) {
     
     if (target.classList.contains('section-wrapper')) {
         const title = wrapper.querySelector('.title').textContent;
-        const sectionsParam = encodeURIComponent(JSON.stringify(sections));
         window.location.href = `article.html?articleId=${index}&articleTitle=${encodeURIComponent(title)}`;
     } else if (target.classList.contains('edit-section-btn')) {
         editSection(section, wrapper, target);
@@ -213,7 +211,6 @@ function deleteSection(wrapper, section) {
 }
 
 function loadState() {
-    const savedSections = JSON.parse(localStorage.getItem('sections'));
     tutorialComplete = localStorage.getItem('tutorial-complete') === 'true';
     const transaction = db.transaction(['articles'], 'readonly');
     const articleStore = transaction.objectStore('articles');
@@ -225,9 +222,6 @@ function loadState() {
         
         articles = event.target.result;
         articles.sort((a, b) => b.articleId - a.articleId);
-        articles.forEach(article => {
-          console.log('Article: ' + article.articleId);
-        });
         
         if (articles && articles.length > 0) {
             document.getElementById('clear-all-btn').style.display = 'inline';
@@ -245,8 +239,6 @@ function loadState() {
 }
 
 function saveState() {
-    localStorage.setItem('sections', JSON.stringify(sections));
-    
     const transaction = db.transaction(['articles'], 'readwrite');
     
     const articleStore = transaction.objectStore('articles');
@@ -261,8 +253,6 @@ function clearSavedState() {
         const articleStore = transaction.objectStore('articles');
 
         articleStore.clear();
-        localStorage.removeItem('sections');
-        
 
         transaction.oncomplete = function() {
             console.log('Data cleared from IndexedDB');
@@ -275,16 +265,12 @@ function clearSavedState() {
     }
 }
 
-function deleteCommand(id, type) {
+function deleteCommand(id) {
   const transaction = db.transaction(['articles'], 'readwrite');
     
     const articleStore = transaction.objectStore('articles');
     
-    if (type === 'section') {
-        sections = sections.filter(section => section.id !== id);
-    } else if (type === 'article') {
-        articles = articles.filter(article => article.articleId !== id);
-        articleStore.delete(id);
-    }
+    articles = articles.filter(article => article.articleId !== id);
+    articleStore.delete(id);
     saveState();
 }
