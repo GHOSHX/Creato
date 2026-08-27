@@ -22,14 +22,12 @@ let rows = [];
 let cells = [];
 let undoList = [];
 let redoList = [];
-let tempArray = [];
 let previousSaves = [];
 let articleName;
 let currentArticleId;
 let currentTextArea;
 let toggleSynopsisBtn;
 let toggleInfoboxBtn;
-let editSynopsisBtn;
 let toggleAddBtn;
 let addRow1Btn;
 let addRow2Btn;
@@ -56,7 +54,6 @@ document.addEventListener('DOMContentLoaded', () => {
     fileUploadBtn = document.getElementById('file-upload-btn');
     downloadBtn = document.getElementById('download-btn');
     settingsBtn = document.getElementById('settings-btn');
-    editSynopsisBtn = document.getElementById('edit-synopsis-btn');
     toggleAddBtn = document.getElementById('toggle-add-btn');
     addRow1Btn = document.getElementById('add-infobox-btn');
     addRow2Btn = document.getElementById('add-category-btn');
@@ -118,9 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const clone = content.cloneNode(true);
         
-            clone.querySelectorAll('img').forEach(img => {
-                img.setAttribute('src', '[REDACTED]');
-            });
+            clone.querySelectorAll('img').forEach(img => img.setAttribute('src', '[REDACTED]'));
             
             codeBlock.value = clone.innerHTML;
             this.innerHTML = `<b>Hide Code</b>`;
@@ -192,50 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('upload-input').click();
     });
     document.getElementById('upload-input').addEventListener('change', uploadFile);
-    downloadBtn.addEventListener('click', async () => {
-      try {
-        const articleData = {
-          articleId: currentArticleId,
-          data: data,
-          rows: rows,
-          cells: cells
-        };
-        const jsonContent = JSON.stringify(articleData, null, 2);
-    
-        // ✅ Check if File System Access API is available
-        if (window.showSaveFilePicker) {
-          const handle = await window.showSaveFilePicker({
-            suggestedName: `${articleName || 'gameData'}.json`,
-            types: [{
-              description: 'JSON file',
-              accept: { 'application/json': ['.json'] },
-            }],
-          });
-    
-          const writable = await handle.createWritable();
-          await writable.write(jsonContent);
-          await writable.close();
-    
-          alert('File saved successfully ✅');
-        } else {
-          // ✅ Fallback for Firefox, Safari, etc.
-          const blob = new Blob([jsonContent], { type: 'application/json' });
-          const url = URL.createObjectURL(blob);
-    
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `${articleName || 'gameData'}.json`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-    
-          URL.revokeObjectURL(url);
-          alert('File backup downloaded ✅');
-        }
-      } catch (err) {
-        console.error('File save cancelled or failed:', err);
-      }
-    });
+    downloadBtn.addEventListener('click', downloadFile);
     document.getElementById('upload-img-btn').addEventListener('click', function () {
       const imgBtn = this.parentNode.querySelectorAll('.infobox-img-btn');
       let buttonDisplay;
@@ -256,6 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     document.getElementById('img-link-btn2').addEventListener('click', () => {
       const url = prompt('Enter the URL', 'https://');
+      if (!url || url === 'https://') return;
       const oldPoster = data.poster;
       data.poster = url;
       const poster = document.getElementById('poster');
@@ -290,19 +243,20 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('row-list').addEventListener('input', handleRowInput);
     document.getElementById('row-list').addEventListener('change', handleRowChange);
     document.getElementById('intro-input').addEventListener('input', (event) => {
-        const element = event.target;
-        const elementActions = undoList.filter(undo => undo.element === element);
-        const lastText = elementActions.length ? elementActions[elementActions.length - 1].newData : document.getElementById('intro').innerHTML;
-        
-        actionManager(element, null, null, element.innerHTML, lastText, 'text-change');
+        handleTextInput(event, 'intro');
     });
     document.getElementById('synopsis-text-input').addEventListener('input', (event) => {
-        const element = event.target;
-        const elementActions = undoList.filter(undo => undo.element === element);
-        const lastText = elementActions.length ? elementActions[elementActions.length - 1].newData : document.getElementById('synopsis-text').innerHTML;
-        actionManager(element, null, null, element.innerHTML, lastText, 'text-change');
+        handleTextInput(event, 'synopsis-text');
     });
 });
+
+function handleTextInput(event, originalId) {
+    const element = event.target;
+    const elementActions = undoList.filter(undo => undo.element === element);
+    const lastText = elementActions.length ? elementActions[elementActions.length - 1].newData : document.getElementById(originalId).innerHTML;
+    
+    actionManager(element, null, null, element.innerHTML, lastText, 'text-change');
+}
 
 function toggleUpperToolbar() {
     const upperToolbarBtn = document.getElementById('upper-toolbar-btn');
@@ -402,9 +356,9 @@ function actionManager(element, object, parentNode, newData, oldData, type) {
         };
     } else {
         newAction = {
-          newData,
+          mainArray: newData,
+          newData: JSON.parse(JSON.stringify(newData)),
           oldData,
-          mainArray: null,
           type,
           element,
           object,
@@ -440,27 +394,9 @@ function undoManager() {
     } else if (type === 'image-change') {
         element.src = previousAction.oldData;
     } else {
-        const elementObj = previousAction.object;
-        const parentNode = previousAction.parentNode;
-        const newArray = previousAction.newData;
         const oldArray = previousAction.oldData;
-        if (!previousAction.mainArray) {
-            previousAction.mainArray = newArray;
-            previousAction.newData = JSON.parse(JSON.stringify(newArray));
-        }
-        const mainArray = previousAction.mainArray;
-        let oldElements = [];
         
-        if (element?.length) {
-            mainArray.push(...elementObj);
-            oldElements.push(...element);
-        } else if (element?.classList.length) {
-            mainArray.push(elementObj);
-            oldElements.push(element);
-        }
-        oldElements.push(...parentNode.children);
-        
-        if (reAlignRows(mainArray, oldElements, oldArray, parentNode, undoList, type)) undoManager();
+        if (reAlignRows(element, previousAction, oldArray, undoList, type)) undoManager();
     }
     redoList.push(previousAction);
 }
@@ -476,37 +412,38 @@ function redoManager() {
     } else if (type === 'image-change') {
         element.src = previousAction.newData;
     } else {
-        const elementObj = previousAction.object;
-        const parentNode = previousAction.parentNode;
         const newArray = previousAction.newData;
-        const mainArray = previousAction.mainArray;
-        let oldElements = [];
         
-        if (element?.length) {
-            mainArray.push(...elementObj);
-            oldElements.push(...element);
-        } else if (element?.classList.length) {
-            mainArray.push(elementObj);
-            oldElements.push(element);
-        }
-        oldElements.push(...parentNode.children);
-        
-        if (reAlignRows(mainArray, oldElements, newArray, parentNode, redoList, type)) redoManager();
+        if (reAlignRows(element, previousAction, newArray, redoList, type)) redoManager();
     }
     undoList.push(previousAction);
 }
 
-function reAlignRows(mainArray, oldElements, savedArray, parentNode, doList, type) {
+function reAlignRows(element, previousAction, savedArray, doList, type) {
+    const mainArray = previousAction.mainArray;
+    const elementObj = previousAction.object;
+    const parentNode = previousAction.parentNode;
+    let oldElements = [];
+
+    if (element?.length) {
+        mainArray.push(...elementObj);
+        oldElements.push(...element);
+    } else if (element?.classList.length) {
+        mainArray.push(elementObj);
+        oldElements.push(element);
+    }
+    oldElements.push(...parentNode.children);
+  
     let filteredRows = [];
     
-    savedArray.forEach(newObj => {
-        const object = mainArray.find(obj => obj.id == newObj.id);
+    savedArray.forEach(savedObj => {
+        const object = mainArray.find(obj => obj.id == savedObj.id);
         
         if (object) {
-            object.position = newObj.position;
+            object.position = savedObj.position;
             filteredRows.push(object)
         }
-        const node = oldElements.find(node => node.dataset.index == newObj.id);
+        const node = oldElements.find(node => node.dataset.index == savedObj.id);
         oldElements.splice(oldElements.indexOf(node), 1);
         parentNode.appendChild(node);
     });
@@ -1019,16 +956,16 @@ function handleSaveClick(event) {
 
 function handleCellClick(event) {
     const target = event.target;
-    const row = target.closest('.info-wrapper');
-    const index = row ? row.dataset.index : null;
+    const cellNode = target.closest('.info-wrapper');
+    const index = cellNode ? cellNode.dataset.index : null;
     const cell = cells.find(el => el.id == index);
     
     if (target.classList.contains('cell-up-btn')) {
-        moveCell(row, cell, 'up');
+        moveCell(cellNode, cell, 'up');
     } else if (target.classList.contains('cell-down-btn')) {
-        moveCell(row, cell, 'down');
+        moveCell(cellNode, cell, 'down');
     } else if (target.classList.contains('row-delete-btn')) {
-        deleteElement(row, cell, cells, 'cell');
+        deleteElement(cellNode, cell, cells, 'cell');
     }
 }
 
@@ -2067,6 +2004,51 @@ function uploadFile(event) {
       }
     };
     reader.readAsText(file);
+}
+
+async function downloadFile() {
+    try {
+      const articleData = {
+        articleId: currentArticleId,
+        data: data,
+        rows: rows,
+        cells: cells
+      };
+      const jsonContent = JSON.stringify(articleData, null, 2);
+  
+      // ✅ Check if File System Access API is available
+      if (window.showSaveFilePicker) {
+        const handle = await window.showSaveFilePicker({
+          suggestedName: `${articleName || 'gameData'}.json`,
+          types: [{
+            description: 'JSON file',
+            accept: { 'application/json': ['.json'] },
+          }],
+        });
+  
+        const writable = await handle.createWritable();
+        await writable.write(jsonContent);
+        await writable.close();
+  
+        alert('File saved successfully ✅');
+      } else {
+        // ✅ Fallback for Firefox, Safari, etc.
+        const blob = new Blob([jsonContent], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+  
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${articleName || 'gameData'}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+  
+        URL.revokeObjectURL(url);
+        alert('File backup downloaded ✅');
+      }
+    } catch (err) {
+      console.error('File save cancelled or failed:', err);
+    }
 }
 
 function saveState(trigger) {
