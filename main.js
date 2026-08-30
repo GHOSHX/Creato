@@ -42,6 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('home-pic2').style.display = 'none';
         }
     });
+    document.getElementById('clear-all-btn').addEventListener('click', clearSavedState);
     document.getElementById('create-article-btn').addEventListener('click', generateArticle);
     document.getElementById('article-list').addEventListener('click', handleSectionClick);
     document.getElementById('article-list').addEventListener('change', handleSectionChange);
@@ -122,7 +123,7 @@ function updateSection(template, section) {
     } else {
         introText = section.data.intro;
     }
-    template.querySelector('.intro-text').textContent = introText + '...(tap to open)';
+    template.querySelector('.intro-text').innerHTML = introText + '...(tap to open)';
     template.querySelector('.article-poster').style.backgroundImage = `url(${section.data.poster})`;
 }
 
@@ -182,7 +183,7 @@ function editSection(section, element, target) {
         poster.style.pointerEvents = '';
         title.textContent = section.data.title;
         target.textContent = '✏️';
-        saveState();
+        saveState(section);
     }
 }
 
@@ -238,12 +239,19 @@ function loadState() {
     };
 }
 
-function saveState() {
+function saveState(section) {
     const transaction = db.transaction(['articles'], 'readwrite');
     
     const articleStore = transaction.objectStore('articles');
-    
-    articles.forEach(article => articleStore.put(article));
+
+    if (section) {
+        articleStore.put(section);
+    } else {
+        articles.forEach(article => articleStore.put(article));
+    }
+    transaction.oncomplete = function() {
+        console.log('Data saved to IndexedDB');
+    };
 }
 
 function clearSavedState() {

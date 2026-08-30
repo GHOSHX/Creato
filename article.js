@@ -37,7 +37,8 @@ let addCell2Btn;
 let editButton;
 let fileUploadBtn;
 let downloadBtn;
-let settingsBtn
+let settingsBtn;
+let toggleSidebarBtn;
 let content;
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -48,8 +49,9 @@ document.addEventListener('DOMContentLoaded', () => {
     openDB();
     
     const inputPoster = document.getElementById('poster-input');
-    toggleSynopsisBtn = document.getElementById('toggle-synopsis-btn');
+    toggleSynopsisBtn = document.getElementById('see-more-btn');
     toggleInfoboxBtn = document.getElementById('toggle-infobox-btn');
+    toggleSidebarBtn = document.getElementById('sidebar-toggle-btn');
     editButton = document.getElementById('edit-article-btn');
     fileUploadBtn = document.getElementById('file-upload-btn');
     downloadBtn = document.getElementById('download-btn');
@@ -62,6 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
     addCell2Btn = document.getElementById('add-info-btn2');
     content = document.getElementById('content');
     content.style.display = 'none';
+    toggleSynopsisBtn.addEventListener('click', toggleSynopsisBio);
     addCell1Btn.addEventListener('click', () => generateCell('info-template', null));
     addCell2Btn.addEventListener('click', () => generateCell('info-template2', null));
     toggleAddBtn.addEventListener('click', () => {
@@ -79,8 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('add-table-btn').addEventListener('click', () => generateRow(null, null, 'table'));
     addRow2Btn.addEventListener('click', () => generateRow(null, null, 'category'));
     addRow3Btn.addEventListener('click', () => generateRow(null, null, 'text-area'));
-    toggleSynopsisBtn.addEventListener('click', () => toggleTable('table1', toggleSynopsisBtn));
-    toggleInfoboxBtn.addEventListener('click', () => toggleTable('row-list', toggleInfoboxBtn));
+    toggleInfoboxBtn.addEventListener('click', toggleRowList);
     document.getElementById('reset-article-btn').addEventListener('click', () => {
         if (confirm('Are you sure you want to reset this article?')) {
             resetArticle();
@@ -172,7 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     document.getElementById('bullet-list-btn').addEventListener('click', () => styleText('ul'));
     editButton.addEventListener('click', editArticle);
-    document.getElementById('sidebar-toggle-btn').addEventListener('click', function () {
+    toggleSidebarBtn.addEventListener('click', function () {
         const sidebar = document.getElementById('sidebar');
         
         sidebar.classList.toggle('show');
@@ -242,9 +244,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('row-list').addEventListener('click', handleRowClick);
     document.getElementById('row-list').addEventListener('input', handleRowInput);
     document.getElementById('row-list').addEventListener('change', handleRowChange);
-    document.getElementById('intro-input').addEventListener('input', (event) => {
-        handleTextInput(event, 'intro');
-    });
     document.getElementById('synopsis-text-input').addEventListener('input', (event) => {
         handleTextInput(event, 'synopsis-text');
     });
@@ -371,15 +370,15 @@ function actionManager(element, object, parentNode, newData, oldData, type) {
 }
 
 function selectedTextBeforeCursor(element) {
-  const selection = window.getSelection();
-  if (!selection.rangeCount) return '';
-
-  const range = selection.getRangeAt(0);
-  const preCaretRange = range.cloneRange();
-  preCaretRange.selectNodeContents(element);
-  preCaretRange.setEnd(range.endContainer, range.endOffset);
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return '';
   
-  return preCaretRange.toString();
+    const range = selection.getRangeAt(0);
+    const preCaretRange = range.cloneRange();
+    preCaretRange.selectNodeContents(element);
+    preCaretRange.setEnd(range.endContainer, range.endOffset);
+    
+    return preCaretRange.toString();
 }
 
 function undoManager() {
@@ -432,17 +431,15 @@ function reAlignRows(element, previousAction, savedArray, doList, type) {
         mainArray.push(elementObj);
         oldElements.push(element);
     }
-    oldElements.push(...parentNode.children);
+    oldElements.push(...Array.from(parentNode.children).filter(node => !node.classList.contains('row-delete-wrapper') && !node.classList.contains('row2-wrapper')));
   
     let filteredRows = [];
     
     savedArray.forEach(savedObj => {
         const object = mainArray.find(obj => obj.id == savedObj.id);
+        object.position = savedObj.position;
+        filteredRows.push(object)
         
-        if (object) {
-            object.position = savedObj.position;
-            filteredRows.push(object)
-        }
         const node = oldElements.find(node => node.dataset.index == savedObj.id);
         oldElements.splice(oldElements.indexOf(node), 1);
         parentNode.appendChild(node);
@@ -453,9 +450,7 @@ function reAlignRows(element, previousAction, savedArray, doList, type) {
     mainArray.sort((a, b) => a.position - b.position);
     
     oldElements.forEach(node => {
-        if (!node.classList.contains('row-delete-wrapper') && !node.classList.contains('row2-wrapper')) {
-            node.remove();
-        }
+        node.remove();
     });
     
     if (doList.length) {
@@ -466,11 +461,25 @@ function reAlignRows(element, previousAction, savedArray, doList, type) {
     }
 }
 
-function toggleTable(tableId, button) {
-    let isVisible = getComputedStyle(button).backgroundImage.includes('https://i.ibb.co/s91K27m8/20251024-091953.png');
-    var table = document.getElementById(tableId);
+function toggleSynopsisBio(event) {
+    const synopsisElement = document.getElementById('synopsis-wrapper');
+    const btnElement = event.target;
+
+    if (synopsisElement.style.maxHeight) {
+        synopsisElement.style.maxHeight = '';
+        btnElement.textContent = 'show more';
+    } else {
+        synopsisElement.style.maxHeight = synopsisElement.scrollHeight + 'px';
+        btnElement.textContent = 'show less';
+    }
+}
+
+function toggleRowList(event) {
+    const button = event.target;
+    const isVisible = getComputedStyle(button).backgroundImage.includes('https://i.ibb.co/s91K27m8/20251024-091953.png');
+    const table = document.getElementById('row-list');
     const rowNodes = document.querySelectorAll('.row-wrapper');
-    
+  
     if (!isVisible) {
         table.style.display = 'block';
         button.style.backgroundImage = 'url(https://i.ibb.co/s91K27m8/20251024-091953.png)';
@@ -648,11 +657,11 @@ function editArticle() {
     const mainInfobox = document.getElementById('infobox');
     const title = document.getElementById('title');
     const introText = document.getElementById('intro');
+    const introWrapper = document.getElementById('intro-wrapper');
     const synopsisText = document.getElementById('synopsis-text');
     const titleInput = document.getElementById('title-input');
     const poster = document.getElementById('poster');
     const articleTitle = document.querySelector(`.article-section[data-id="${currentArticleId}"]`).querySelector('.article-title');
-    const introInput = document.getElementById('intro-input');
     const synopsisInput = document.getElementById('synopsis-text-input');
     const container = document.getElementById('container');
     const rowList = document.getElementById('row-list');
@@ -661,7 +670,7 @@ function editArticle() {
     
     if (db) {
         if (editMode) {
-            if (getComputedStyle(toggleSynopsisBtn).backgroundImage.includes('https://i.ibb.co/6q919Xb/20251024-055350.png')) {
+            if (toggleSynopsisBtn.textContent === 'show more') {
                 toggleSynopsisBtn.click();
             }
             if (getComputedStyle(toggleInfoboxBtn).backgroundImage.includes('https://i.ibb.co/6q919Xb/20251024-055350.png')) {
@@ -680,11 +689,9 @@ function editArticle() {
             mainInfobox.classList.toggle('cell-edit-mode');
             toolbar.style.display = '';
             titleInput.value = title.textContent;
-            introInput.innerHTML = introText.innerHTML;
-            synopsisInput.innerHTML = synopsisText.innerHTML;
-            introInput.style.display = 'block';
+            synopsisInput.innerHTML = data.intro + '<br>' + data.synopsis;
             synopsisInput.style.display = 'block';
-            introText.style.display = 'none';
+            introWrapper.style.display = 'none';
             synopsisText.style.display = 'none';
             editButton.textContent = '✔️';
             editRow(editMode);
@@ -702,15 +709,21 @@ function editArticle() {
             mainInfobox.classList.toggle('cell-edit-mode');
             data.title = titleInput.value;
             articleTitle.textContent = data.title;
-            data.intro = introInput.innerHTML;
             data.poster = poster.src;
-            data.synopsis = synopsisInput.innerHTML;
             title.textContent = data.title;
-            introText.innerHTML = data.intro;
-            synopsisText.innerHTML = data.synopsis;
-            introInput.style.display = 'none';
+            synopsisText.innerHTML = synopsisInput.innerHTML;
+            let outputText = synopsisText.innerHTML.split('<br>')[0];
+            if (getComputedStyle(toggleSidebarBtn).display.includes('none')) {
+                data.intro = outputText;
+                data.synopsis = synopsisText.innerHTML.replace(outputText, '');
+            } else {
+                data.intro = outputText;
+                introText.innerHTML = data.intro;
+                data.synopsis = synopsisText.innerHTML.replace(outputText + '<br>', '');
+                synopsisText.innerHTML = data.synopsis;
+            }
             synopsisInput.style.display = 'none';
-            introText.style.display = 'block';
+            introWrapper.style.display = 'block';
             synopsisText.style.display = 'block';
             toolbar.style.display = 'none';
             editButton.textContent = '✏️';
@@ -1025,7 +1038,7 @@ function handleRowClick(event) {
         const section = target.closest('.section-wrapper');
         moveSection(section, row, 'down');
     } else if (target.classList.contains('see-more-btn')) {
-        toggleBio(rowNode);
+        toggleBio(rowNode, target);
     } else if (target.classList.contains('copy-row-btn')) {
         generateRow(rowNode, row, 'copy');
     } else if (target.classList.contains('delete-btn')) {
@@ -1813,9 +1826,8 @@ function alignCategory(catNode, category) {
     alignRows();
 }
 
-function toggleBio(row) {
+function toggleBio(row, btnElement) {
     const bioElement = row.querySelector('.infobox-bio');
-    const btnElement = row.querySelector('.see-more-btn');
 
     if (bioElement.style.maxHeight) {
         bioElement.style.maxHeight = null;
@@ -1873,12 +1885,13 @@ function updateSection(template, section) {
 
 function updateData(data) {
     document.getElementById('title').textContent = data.title;
-    document.getElementById('intro').innerHTML = data.intro;
-    document.getElementById('synopsis-text').innerHTML = data.synopsis;
+    if (getComputedStyle(toggleSidebarBtn).display.includes('none')) {
+        document.getElementById('synopsis-text').innerHTML = data.intro + data.synopsis;
+    } else {
+        document.getElementById('intro').innerHTML = data.intro;
+        document.getElementById('synopsis-text').innerHTML = data.synopsis;
+    }
     document.getElementById('synopsis-text-input').addEventListener('focus', function(event) {
-        currentTextArea = event.target;
-    });
-    document.getElementById('intro-input').addEventListener('focus', function(event) {
         currentTextArea = event.target;
     });
     document.getElementById('poster').src = data.poster;
