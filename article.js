@@ -40,6 +40,7 @@ let downloadBtn;
 let settingsBtn;
 let toggleSidebarBtn;
 let content;
+let currentTextLength;
 
 document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -244,15 +245,20 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('row-list').addEventListener('click', handleRowClick);
     document.getElementById('row-list').addEventListener('input', handleRowInput);
     document.getElementById('row-list').addEventListener('change', handleRowChange);
-    document.getElementById('synopsis-text-input').addEventListener('input', (event) => {
-        handleTextInput(event, 'synopsis-text');
-    });
+    document.getElementById('synopsis-text-input').addEventListener('input', handleTextInput);
+    document.getElementById('synopsis-text-input').addEventListener('click', handleTextClick);
 });
 
-function handleTextInput(event, originalId) {
+function handleTextClick(event) {
+    const element = event.target;
+    const selectedText = selectedTextBeforeCursor(element);
+    currentTextLength = selectedText.length;
+}
+
+function handleTextInput(event) {
     const element = event.target;
     const elementActions = undoList.filter(undo => undo.element === element);
-    const lastText = elementActions.length ? elementActions[elementActions.length - 1].newData : document.getElementById(originalId).innerHTML;
+    const lastText = elementActions.length ? elementActions[elementActions.length - 1].newData : data.intro + '<br>' + data.synopsis;
     
     actionManager(element, null, null, element.innerHTML, lastText, 'text-change');
 }
@@ -325,7 +331,8 @@ function actionManager(element, object, parentNode, newData, oldData, type) {
         const previousAction = elementActions[elementActions.length - 1];
         if (elementActions.length) {
             const targetText = `${previousAction.tempText.selectedText} `;
-            if (selectedText.replace(/\u00A0/g, ' ') === targetText || previousAction.tempText.selectedText.length > selectedText.length || selectedText.length > targetText.length + 13) {
+            if (selectedText.endsWith('\u00A0') || previousAction.tempText.selectedText.length > selectedText.length || previousAction.tempText.currentTextLength !== currentTextLength) {
+                console.log('yay!');
                 previousAction.newData = previousAction.tempText.newData;
             } else {
                 previousAction.tempText.newData = newData;
@@ -340,7 +347,8 @@ function actionManager(element, object, parentNode, newData, oldData, type) {
           newData,
           tempText: { 
             newData, 
-            selectedText
+            selectedText,
+            currentTextLength
           },
           oldData,
           type,
@@ -669,6 +677,8 @@ function editArticle() {
     const editMode = editButton.textContent === '✏️';
     
     if (db) {
+        editRow(editMode);
+        editMainInfobox(editMode);
         if (editMode) {
             if (toggleSynopsisBtn.textContent === 'show more') {
                 toggleSynopsisBtn.click();
@@ -694,8 +704,6 @@ function editArticle() {
             introWrapper.style.display = 'none';
             synopsisText.style.display = 'none';
             editButton.textContent = '✔️';
-            editRow(editMode);
-            editMainInfobox(editMode);
         } else {
             controlRoom.forEach(room => {
                 room.style.display = 'none';
@@ -728,8 +736,6 @@ function editArticle() {
             toolbar.style.display = 'none';
             editButton.textContent = '✏️';
             assignCategoriesToRows();
-            editRow(editMode);
-            editMainInfobox(editMode);
             saveState(6);
         }
     }
@@ -874,7 +880,7 @@ function editSection(row, infobox, editMode) {
             const valueInput = section.querySelector('.value-input');
             const index = infoTitle.closest('.section-wrapper').getAttribute('data-index');
             let cell = sections.find(el => el.id == index);
-            
+
             if (editMode) {
                 infoInput.innerHTML = infoTitle.innerHTML;
                 if (!rowCell3) {
@@ -979,6 +985,8 @@ function handleCellClick(event) {
         moveCell(cellNode, cell, 'down');
     } else if (target.classList.contains('row-delete-btn')) {
         deleteElement(cellNode, cell, cells, 'cell');
+    } else if (target.classList.contains('info-input') || target.classList.contains('value-input')) {
+        handleTextClick(event);
     }
 }
 
@@ -1105,6 +1113,8 @@ function handleRowClick(event) {
                 button.style.display = 'none';
             }
         });
+    } else if (target.classList.contains('bio-input') || target.classList.contains('info-input') || target.classList.contains('value-input')) {
+        handleTextClick(event);
     }
 }
 

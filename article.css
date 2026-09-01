@@ -432,6 +432,11 @@ th, td {
   box-sizing: border-box;
 }
 
+.info-input > div,
+.value-input > div {
+  pointer-events: none;
+}
+
 .info-title, .value-cell {
   font-size: 15px;
 }
@@ -617,6 +622,10 @@ p {
     box-sizing: border-box;
 }
 
+.bio-input > div {
+  pointer-events: none;
+}
+
 .category-controls, .row-controls {
   display: flex;
   justify-content: center;
@@ -715,6 +724,10 @@ p {
   width: 100%;
   box-sizing: border-box;
   padding: 5px;
+}
+
+#synopsis-text-input > div {
+  pointer-events: none;
 }
 
 #poster-wrapper {
