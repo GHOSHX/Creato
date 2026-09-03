@@ -40,7 +40,7 @@ let downloadBtn;
 let settingsBtn;
 let toggleSidebarBtn;
 let content;
-let currentTextLength;
+let cursorMoved;
 
 document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -251,8 +251,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function handleTextClick(event) {
     const element = event.target;
-    const selectedText = selectedTextBeforeCursor(element);
-    currentTextLength = selectedText.length;
+    const selectedText = textBeforeCursor(element);
+    const elementActions = undoList.filter(action => action.element == element);
+    const lastText = elementActions.length ? elementActions[elementActions.length - 1].tempText.selectedText : null;
+    if (lastText && lastText.length !== selectedText.length) {
+        cursorMoved = true;
+    }
 }
 
 function handleTextInput(event) {
@@ -326,14 +330,13 @@ function toggleList(event) {
 function actionManager(element, object, parentNode, newData, oldData, type) {
     let newAction = {};
     if (type === 'text-change') {
-        const selectedText = selectedTextBeforeCursor(element);
+        const selectedText = textBeforeCursor(element);
         const elementActions = undoList.filter(undo => undo.element === element);
         const previousAction = elementActions[elementActions.length - 1];
         if (elementActions.length) {
-            const targetText = `${previousAction.tempText.selectedText} `;
-            if (selectedText.endsWith('\u00A0') || previousAction.tempText.selectedText.length > selectedText.length || previousAction.tempText.currentTextLength !== currentTextLength) {
-                console.log('yay!');
+            if (selectedText.endsWith('\u00A0') || previousAction.tempText.selectedText.length > selectedText.length || cursorMoved) {
                 previousAction.newData = previousAction.tempText.newData;
+                cursorMoved = false;
             } else {
                 previousAction.tempText.newData = newData;
                 previousAction.tempText.selectedText = selectedText;
@@ -347,8 +350,7 @@ function actionManager(element, object, parentNode, newData, oldData, type) {
           newData,
           tempText: { 
             newData, 
-            selectedText,
-            currentTextLength
+            selectedText
           },
           oldData,
           type,
@@ -377,7 +379,7 @@ function actionManager(element, object, parentNode, newData, oldData, type) {
     redoList = [];
 }
 
-function selectedTextBeforeCursor(element) {
+function textBeforeCursor(element) {
     const selection = window.getSelection();
     if (!selection.rangeCount) return '';
   
