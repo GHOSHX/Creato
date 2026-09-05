@@ -399,6 +399,11 @@ function undoManager() {
     type = previousAction.type;
     
     if (type === 'text-change') {
+        if (previousAction.oldData.replace(/&nbsp;/g, '') === previousAction.newData.replace(/&nbsp;/g, '')) {
+            undoManager();
+            return;
+        }
+        
         element.innerHTML = previousAction.oldData;
     } else if (type === 'image-change') {
         element.src = previousAction.oldData;
