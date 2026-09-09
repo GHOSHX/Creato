@@ -1220,8 +1220,8 @@ function generateRow(elementNode, element, type) {
         if (type === 'category' || type === 'sub-category') {
             let childRows;
             let childRowNodes;
+            const parentNode = elementNode.parentNode;
             if (type === 'category') {
-                const parentNode = elementNode.parentNode;
                 childRows = rows.filter(row => row.category === element.id);
                 childRowNodes = parentNode.querySelectorAll(`.row-wrapper[data-category="${element.id}"]`);
             } else {
